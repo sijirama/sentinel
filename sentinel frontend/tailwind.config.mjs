@@ -9,6 +9,9 @@ const config = {
         transparent: 'transparent',
         current: 'currentColor',
         extend: {
+            fontFamily: {
+                poppins: ["Poppins", "sans-serif"],
+            },
             colors: {
                 // light mode
                 tremor: {
