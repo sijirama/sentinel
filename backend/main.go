@@ -93,7 +93,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "data: %s\n\n", jsonData)
 		}
 		w.(http.Flusher).Flush()
-		time.Sleep(30 * time.Second)
+		time.Sleep(60 * time.Second)
 	}
 
 }
@@ -150,12 +150,19 @@ func getStatusData() (ResponseData, error) {
 
 func calculateUptime(siteID string) (float64, error) {
 	var count int64
-	result := storage.Model(&StatusData{}).Where("site_id = ? AND status = 1 AND time > ?", siteID, time.Now().Add(-24*time.Hour)).Count(&count)
+	checkInterval := 60 // seconds
+	period := 24 * time.Hour
+
+	result := storage.Model(&StatusData{}).
+		Where("site_id = ? AND status = 1 AND time > ?", siteID, time.Now().Add(-period)).
+		Count(&count)
+
 	if result.Error != nil {
 		return 0, fmt.Errorf("failed to calculate uptime: %w", result.Error)
 	}
-	total := 24 * 60 * 60 / 30 // Assuming we check every 30 seconds
-	return (float64(count) / float64(total)) * 100, nil
+
+	totalChecks := int64(period.Seconds()) / int64(checkInterval)
+	return (float64(count) / float64(totalChecks)) * 100, nil
 }
 
 func checkSiteStatus(url string) (StatusData, error) {
