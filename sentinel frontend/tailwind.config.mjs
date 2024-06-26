@@ -10,7 +10,7 @@ const config = {
         current: 'currentColor',
         extend: {
             fontFamily: {
-                poppins: ["Poppins", "sans-serif"],
+                poppins: ['Poppins', 'sans-serif'],
             },
             colors: {
                 // light mode
