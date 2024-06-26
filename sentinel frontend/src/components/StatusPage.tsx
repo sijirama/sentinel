@@ -101,9 +101,8 @@ const StatusComponent: React.FC = () => {
                 <h1 className="text-2xl font-bold mb-4">SENTINEL</h1>
 
                 <div
-                    className={`p-4 mb-6 rounded-sm text-start font-bold ${
-                        areAllOperational ? 'bg-green-500' : 'bg-red-500'
-                    }`}
+                    className={`p-4 mb-6 rounded-sm text-start font-bold ${areAllOperational ? 'bg-green-500' : 'bg-red-500'
+                        }`}
                 >
                     {areAllOperational
                         ? 'All Systems Operational'
