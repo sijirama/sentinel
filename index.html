@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #0a2f5e;
+            color: #ffffff;
+        }
+        .service {
+            margin-bottom: 20px;
+            border: 1px solid #2c5282;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #1a4173;
+        }
+        .status-bar {
+            display: flex;
+            background-color: #2c5282;
+            height: 20px;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .status-segment {
+            flex-grow: 1;
+            height: 100%;
+            margin: 0 1px;
+        }
+        .status-up { background-color: #4CAF50; }
+        .status-down { background-color: #F44336; }
+        .status-unknown { background-color: #FFC107; }
+        #countdown {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            padding: 10px;
+            background-color: #1a4173;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Service Status</h1>
+    <div id="countdown">Next update in: 3:00</div>
+    <div id="status-container">
+        <!-- Status content will be loaded here -->
+    </div>
+
+    <script>
+        const statusContainer = document.getElementById('status-container');
+        const countdownElement = document.getElementById('countdown');
+        let countdownInterval;
+        let lastUpdateTime = Date.now();
+
+        function updateCountdown() {
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - lastUpdateTime) / 1000);
+            const remainingSeconds = Math.max(0, 180 - elapsedSeconds);
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            countdownElement.textContent = `Next update in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            if (remainingSeconds <= 0) {
+                clearInterval(countdownInterval);
+            }
+        }
+
+        function startCountdown() {
+            clearInterval(countdownInterval);
+            lastUpdateTime = Date.now();
+            countdownInterval = setInterval(updateCountdown, 1000);
+        }
+
+        function renderServices(services) {
+            statusContainer.innerHTML = services.map(service => `
+                <div class="service">
+                    <h2>${service.name}</h2>
+                    <p>URL: ${service.url}</p>
+                    <p>Status: ${service.status ? 'Up' : 'Down'}</p>
+                    <div class="status-bar">
+                        ${service.statusHistory.map(status => `
+                            <div class="status-segment ${status ? 'status-up' : 'status-down'}"></div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        const eventSource = new EventSource('/sse');
+        eventSource.onmessage = (event) => {
+            const services = JSON.parse(event.data);
+            renderServices(services);
+            startCountdown();
+        };
+        eventSource.onerror = (error) => {
+            console.error('SSE error:', error);
+            eventSource.close();
+        };
+
+        startCountdown();
+    </script>
+</body>
+</html>
