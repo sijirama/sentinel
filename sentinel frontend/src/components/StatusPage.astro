@@ -1,66 +1,73 @@
 ---
+
 ---
 
 <script>
-
-  interface StatusData {
-    status: number;
-    time: string;
-    msg: string;
-    ping: number;
-  }
-
-  interface ResponseData {
-    heartbeatList: {
-      [key: string]: StatusData[];
-    };
-    uptimeList: {
-      [key: string]: number;
-    };
-  }
-
-  let statusData: ResponseData | null = null;
-
-  function updateUI(data: ResponseData) {
-    statusData = data;
-    const statusElement = document.getElementById('status');
-    if (statusElement) {
-      statusElement.textContent = JSON.stringify(data, null, 2);
+    interface StatusData {
+        status: number;
+        time: string;
+        msg: string;
+        ping: number;
     }
-  }
 
-  function connectSSE() {
-    const eventSource = new EventSource('http://localhost:8080/status');
+    interface Site {
+        id: string;
+        url: string;
+        name: string;
+    }
 
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data) as ResponseData;
-      updateUI(data);
-    };
+    interface SiteStatus {
+        site: Site;
+        status: StatusData[];
+        uptime: number;
+    }
 
-    eventSource.onerror = (error) => {
-      console.error('SSE Error:', error);
-      eventSource.close();
-      setTimeout(connectSSE, 5000); // Reconnect after 5 seconds
-    };
-  }
+    interface ResponseData {
+        siteStatuses: {
+            [key: string]: SiteStatus;
+        };
+    }
 
-  // Connect to SSE when the component mounts
-  if (typeof window !== 'undefined') {
-    connectSSE();
-  }
+    function updateUI(data: ResponseData) {
+        for (const key in data.siteStatuses){
+            statusDataArray.push(data.siteStatuses[key])
+        }
+        const statusElement = document.getElementById('status');
+        if (statusElement) {
+            statusElement.textContent = JSON.stringify(statusDataArray, null, 2);
+        }
+    }
+
+    function connectSSE() {
+        const eventSource = new EventSource('http://localhost:8080/status');
+
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data) as ResponseData;
+            updateUI(data);
+        };
+
+        eventSource.onerror = (error) => {
+            console.error('SSE Error:', error);
+            eventSource.close();
+            setTimeout(connectSSE, 5000); // Reconnect after 5 seconds
+        };
+    }
+
+
+    let statusDataArray : SiteStatus[] = []
+
+
+    if (typeof window !== 'undefined') {
+        connectSSE();
+    }
 </script>
 
-<div>
-  <h1>Status Page</h1>
-  <pre id="status">Waiting for status data...</pre>
-</div>
+<div class="bg-[#080B0F] text-white min-h-screen">
+    <h1>Status Page</h1>
 
-<style>
-  pre {
-    background-color: #f4f4f4;
-    padding: 10px;
-    border-radius: 5px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-</style>
+    {
+        
+    }
+
+    <pre id="status">Waiting for status data...</pre>
+</div>
