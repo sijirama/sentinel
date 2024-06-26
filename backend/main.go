@@ -3,90 +3,75 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
 	"time"
-
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 type Site struct {
-	ID  string `json:"id" gorm:"primaryKey"`
-	URL string `json:"url"`
+	ID   string `json:"id" gorm:"primaryKey"`
+	URL  string `json:"url"`
+	Name string `json:"name"`
+}
+
+type StatusData struct {
+	ID     string    `gorm:"primaryKey"`
+	Time   time.Time `json:"time"`
+	SiteId string    `gorm:"foreignKey:ID" json:"site_id"`
+	Status int       `json:"status"`
+	Msg    string    `json:"msg"`
+	Ping   int       `json:"ping"`
 }
 
 type Config struct {
 	Sites []Site `json:"sites"`
 }
 
-type StatusData struct {
-	ID     uint      `gorm:"primaryKey"`
-	SiteID string    `json:"site_id"`
-	Status int       `json:"status"`
-	Time   time.Time `json:"time"`
-	Msg    string    `json:"msg"`
-	Ping   int       `json:"ping"`
+type SiteStatus struct {
+	Site     Site         `json:"site"`
+	Statuses []StatusData `json:"statuses"`
+	Uptime   float64      `json:"uptime"`
 }
 
-type HeartbeatList map[string][]StatusData
-
-type UptimeList map[string]float64
-
 type ResponseData struct {
-	HeartbeatList HeartbeatList `json:"heartbeatList"`
-	UptimeList    UptimeList    `json:"uptimeList"`
+	SiteStatuses map[string]SiteStatus `json:"siteStatuses"`
 }
 
 var (
-	config Config
-	db     *gorm.DB
+	config  Config
+	storage *gorm.DB // lord forgive me, i declared global and non global db
 )
 
-func main() {
-	var err error
-	db, err = gorm.Open(sqlite.Open("status.db"), &gorm.Config{})
+func connectToDB() *gorm.DB {
+	db, err := gorm.Open(sqlite.Open("main.db"), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		panic("failed to connect database")
 	}
+	db.AutoMigrate(&Site{}, &StatusData{})
 
-	// Migrate the schema
-	err = db.AutoMigrate(&Site{}, &StatusData{})
-	if err != nil {
-		log.Fatalf("Failed to migrate database schema: %v", err)
-	}
-
-	err = loadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
-	}
-
-	http.HandleFunc("/status", handleStatus)
-	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	storage = db
+	return db
 }
 
-func loadConfig() error {
-	file, err := os.ReadFile("config.json")
+func Load_Config(db *gorm.DB) {
+	configFile, err := os.ReadFile("config.json")
 	if err != nil {
-		return fmt.Errorf("failed to read config file: %w", err)
+		log.Panicln("Failed to load config file")
 	}
+	json.Unmarshal(configFile, &config)
 
-	err = json.Unmarshal(file, &config)
-	if err != nil {
-		return fmt.Errorf("failed to parse config file: %w", err)
-	}
-
-	// Upsert sites from config into database
 	for _, site := range config.Sites {
-		result := db.Where(Site{ID: site.ID}).Assign(Site{URL: site.URL}).FirstOrCreate(&site)
-		if result.Error != nil {
-			return fmt.Errorf("failed to upsert site %s: %w", site.ID, result.Error)
-		}
-	}
+		result := db.Where(&Site{ID: site.ID}).Assign(Site{Name: site.Name, URL: site.URL}).FirstOrCreate(&site)
 
-	return nil
+		if result.Error != nil {
+			log.Panicln("Failed to update server")
+		}
+
+	}
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -98,70 +83,81 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	for {
 		data, err := getStatusData()
 		if err != nil {
-			log.Printf("Error getting status data: %v", err)
-			// Send an error event to the client
-			fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+			log.Printf("Error fetching status data: %v", err)
 		} else {
 			jsonData, err := json.Marshal(data)
 			if err != nil {
-				log.Printf("Error marshaling JSON: %v", err)
+				log.Printf("Error marshalling data: %v", err)
 				continue
 			}
 			fmt.Fprintf(w, "data: %s\n\n", jsonData)
 		}
 		w.(http.Flusher).Flush()
-
 		time.Sleep(30 * time.Second)
 	}
-}
 
+}
 
 func getStatusData() (ResponseData, error) {
-    heartbeatList := make(HeartbeatList)
-    uptimeList := make(UptimeList)
+	siteStatuses := make(map[string]SiteStatus)
+	var sites []Site
+	query := storage.Find(&sites)
+	if query.Error != nil {
+		return ResponseData{}, fmt.Errorf("Failed to fetch sites: %v", query.Error)
+	}
 
-    var sites []Site
-    result := db.Find(&sites)
-    if result.Error != nil {
-        return ResponseData{}, fmt.Errorf("failed to fetch sites: %w", result.Error)
-    }
+	fmt.Println(sites)
 
-    for _, site := range sites {
-        status, err := checkSiteStatus(site.URL)
-        if err != nil {
-            log.Printf("Error checking status for site %s: %v", site.ID, err)
-            continue
-        }
-        status.SiteID = site.ID
-        result = db.Create(&status)
-        if result.Error != nil {
-            log.Printf("Error saving status for site %s: %v", site.ID, result.Error)
-            continue
-        }
+	for _, site := range sites {
 
-        var statuses []StatusData
-        result = db.Where("site_id = ?", site.ID).Order("time desc").Limit(50).Find(&statuses)
-        if result.Error != nil {
-            log.Printf("Error fetching statuses for site %s: %v", site.ID, result.Error)
-            continue
-        }
-        heartbeatList[site.ID] = statuses
+		stat, err := checkSiteStatus(site.URL)
+		if err != nil {
+			log.Printf("Error checking status for site %s: %v", site.ID, err)
+			continue
+		}
 
-        uptime, err := calculateUptime(site.ID)
-        if err != nil {
-            log.Printf("Error calculating uptime for site %s: %v", site.ID, err)
-            continue
-        }
-        uptimeList[site.ID+"_24"] = uptime
-    }
+		stat.SiteId = site.ID
+		stat.ID = uuid.New().String()
+		result := storage.Create(&stat)
+		if result.Error != nil {
+			log.Printf("Error saving status for site %s: %v", site.ID, result.Error)
+			continue
+		}
 
-    return ResponseData{
-        HeartbeatList: heartbeatList,
-        UptimeList:    uptimeList,
-    }, nil
+		var statuses []StatusData
+		result = storage.Where("site_id = ?", site.ID).Order("time desc").Limit(60).Find(&statuses)
+		if result.Error != nil {
+			log.Printf("Error fetching status for site %s: %v", site.ID, result.Error)
+			continue
+		}
+
+		uptime, error := calculateUptime(site.ID)
+		if error != nil {
+			log.Panicf("Error saving status for site %s: %v", site.ID, error)
+			continue
+		}
+
+		siteStatuses[site.ID] = SiteStatus{
+			Site:     site,
+			Uptime:   uptime,
+			Statuses: statuses,
+		}
+
+	}
+
+	return ResponseData{SiteStatuses: siteStatuses}, nil
 }
 
-// ... (rest of the code remains the same)
+func calculateUptime(siteID string) (float64, error) {
+	var count int64
+	result := storage.Model(&StatusData{}).Where("site_id = ? AND status = 1 AND time > ?", siteID, time.Now().Add(-24*time.Hour)).Count(&count)
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to calculate uptime: %w", result.Error)
+	}
+	total := 24 * 60 * 60 / 30 // Assuming we check every 30 seconds
+	return (float64(count) / float64(total)) * 100, nil
+}
+
 func checkSiteStatus(url string) (StatusData, error) {
 	start := time.Now()
 	resp, err := http.Get(url)
@@ -190,13 +186,12 @@ func checkSiteStatus(url string) (StatusData, error) {
 	}, nil
 }
 
-func calculateUptime(siteID string) (float64, error) {
-	var count int64
-	result := db.Model(&StatusData{}).Where("site_id = ? AND status = 1 AND time > ?", siteID, time.Now().Add(-24*time.Hour)).Count(&count)
-	if result.Error != nil {
-		return 0, fmt.Errorf("failed to calculate uptime: %w", result.Error)
-	}
+func main() {
+	db := connectToDB()
+	Load_Config(db)
 
-	total := 24 * 60 * 60 / 30 // Assuming we check every 30 seconds
-	return float64(count) / float64(total), nil
+	http.HandleFunc("/status", handleStatus)
+
+	fmt.Println("Server is running at http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
