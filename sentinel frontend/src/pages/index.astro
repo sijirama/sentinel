@@ -1,5 +1,5 @@
 ---
-import StatusPage from "../components/StatusPage.astro"
+import StatusPage from "../components/StatusPage"
 ---
 
 <html lang="en">
@@ -11,6 +11,6 @@ import StatusPage from "../components/StatusPage.astro"
 		<title>Sentinel</title>
 	</head>
 	<body class="">
-        <StatusPage  />
+        <StatusPage  client:load />
 	</body>
 </html>
