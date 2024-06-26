@@ -62,6 +62,13 @@ const mapStatusToChartData = (statuses: StatusData[]) => {
     }));
 };
 
+const reverStatuses = (data: ResponseData): ResponseData => {
+    Object.entries(data.siteStatuses).map(([key, siteStatus]) => {
+        return siteStatus.statuses = siteStatus.statuses.reverse()
+    })
+    return data
+}
+
 const dataFormatter = (number: number) => `${number}ms`;
 
 const StatusComponent: React.FC = () => {
@@ -74,7 +81,10 @@ const StatusComponent: React.FC = () => {
         eventSource.onmessage = (event) => {
             const data = JSON.parse(event.data) as ResponseData;
 
-            setStatusData(data);
+
+            setStatusData(
+                reverStatuses(data)
+            );
 
             const allOperational = Object.values(data.siteStatuses).every(
                 (site) => site.statuses[site.statuses.length - 1].status === 1
