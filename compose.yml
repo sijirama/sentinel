@@ -5,10 +5,14 @@ services:
     build:
       context: ./backend
       dockerfile: dockerfile
+
+    container_name: backend
     volumes:
       - backend_data:/app/data
     ports:
       - "8080:8080"
+    expose:
+      - "8080"
     environment:
       - GO_ENV=production
     restart: unless-stopped

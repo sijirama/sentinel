@@ -5,11 +5,15 @@ services:
     build:
       context: ./backend
       dockerfile: dev.Dockerfile
+
+    container_name: backend
     volumes:
       - ./backend:/app
       - /app/node_modules
     ports:
       - "8080:8080"
+    expose:
+      - "8080"
     environment:
       - GO_ENV=development
     restart: on-failure

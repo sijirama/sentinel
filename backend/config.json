@@ -1,7 +1,7 @@
 {
   "sites": [
     {"id": "1", "url": "https://buymezobo.ng", "name":"buymezobo"},
-    {"id": "2", "url": "https://siji.vercel.app", "name":"portfolio"}
+    {"id": "2", "url": "https://siji.vercel.app", "name":"portfolio"},
     {"id": "3", "url": "https://foambackend.onrender.com/healthcheck", "name":"Foam Backend"}
   ]
 }

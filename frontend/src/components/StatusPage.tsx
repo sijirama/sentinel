@@ -94,6 +94,7 @@ const StatusComponent: React.FC = () => {
 
         eventSource.onerror = (error) => {
             eventSource.close();
+            console.error("EventSource failed:", event);
         };
 
         return () => {

@@ -34,3 +34,12 @@ coverage
 .env.local
 .env.*.local
 
+
+.git
+.gitignore
+Dockerfile
+.dockerignore
+node_modules/
+dist/
+.astro/
+.env

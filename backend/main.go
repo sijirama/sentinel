@@ -63,6 +63,7 @@ func Load_Config(db *gorm.DB) {
 		log.Panicln("Failed to load config file")
 	}
 	json.Unmarshal(configFile, &config)
+	fmt.Println("this is the config: ", config)
 
 	for _, site := range config.Sites {
 		result := db.Where(&Site{ID: site.ID}).Assign(Site{Name: site.Name, URL: site.URL}).FirstOrCreate(&site)
