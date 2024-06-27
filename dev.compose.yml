@@ -8,6 +8,7 @@ services:
 
     container_name: backend
     volumes:
+      - backend_data:/app/data
       - ./backend:/app
       - /app/node_modules
     ports:

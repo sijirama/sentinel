@@ -22,7 +22,7 @@ services:
       context: ./frontend
       dockerfile: prod.dockerfile
     ports:
-      - "80:80"
+      - "5173:80"
     environment:
       - NODE_ENV=production
     restart: unless-stopped

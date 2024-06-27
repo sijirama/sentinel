@@ -47,7 +47,8 @@ var (
 )
 
 func connectToDB() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("main.db"), &gorm.Config{})
+	dbName := "data/data.sqlite"
+	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -156,7 +157,7 @@ func getStatusData() (ResponseData, error) {
 		return ResponseData{}, fmt.Errorf("Failed to fetch sites: %v", query.Error)
 	}
 
-	fmt.Println(sites)
+	//fmt.Println(sites)
 
 	for _, site := range sites {
 
