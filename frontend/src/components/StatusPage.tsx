@@ -76,7 +76,7 @@ const StatusComponent: React.FC = () => {
     const [areAllOperational, setAllOperational] = useState(false);
 
     useEffect(() => {
-        const eventSource = new EventSource('http://localhost:8080/status');
+        const eventSource = new EventSource('api/status');
 
         eventSource.onmessage = (event) => {
             const data = JSON.parse(event.data) as ResponseData;
