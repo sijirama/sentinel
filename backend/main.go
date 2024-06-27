@@ -75,28 +75,77 @@ func Load_Config(db *gorm.DB) {
 	}
 }
 
+// func handleStatus(w http.ResponseWriter, r *http.Request) {
+// 	w.Header().Set("Content-Type", "text/event-stream")
+// 	w.Header().Set("Cache-Control", "no-cache")
+// 	w.Header().Set("Connection", "keep-alive")
+// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+//
+// 	for {
+// 		data, err := getStatusData()
+// 		if err != nil {
+// 			log.Printf("Error fetching status data: %v", err)
+// 		} else {
+// 			jsonData, err := json.Marshal(data)
+// 			if err != nil {
+// 				log.Printf("Error marshalling data: %v", err)
+// 				continue
+// 			}
+// 			fmt.Fprintf(w, "data: %s\n\n", jsonData)
+// 		}
+// 		w.(http.Flusher).Flush()
+// 		time.Sleep(60 * time.Second)
+// 	}
+//
+// }
+
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	for {
-		data, err := getStatusData()
+	// Send initial data immediately
+	data, err := getStatusData()
+	if err != nil {
+		log.Printf("Error fetching initial status data: %v", err)
+	} else {
+		jsonData, err := json.Marshal(data)
 		if err != nil {
-			log.Printf("Error fetching status data: %v", err)
+			log.Printf("Error marshalling initial data: %v", err)
 		} else {
-			jsonData, err := json.Marshal(data)
-			if err != nil {
-				log.Printf("Error marshalling data: %v", err)
-				continue
-			}
 			fmt.Fprintf(w, "data: %s\n\n", jsonData)
+			w.(http.Flusher).Flush()
 		}
-		w.(http.Flusher).Flush()
-		time.Sleep(60 * time.Second)
 	}
 
+	// Set up a ticker for regular updates
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	// Use a channel to handle client disconnection
+	done := r.Context().Done()
+
+	for {
+		select {
+		case <-ticker.C:
+			data, err := getStatusData()
+			if err != nil {
+				log.Printf("Error fetching status data: %v", err)
+			} else {
+				jsonData, err := json.Marshal(data)
+				if err != nil {
+					log.Printf("Error marshalling data: %v", err)
+					continue
+				}
+				fmt.Fprintf(w, "data: %s\n\n", jsonData)
+				w.(http.Flusher).Flush()
+			}
+		case <-done:
+			// Client disconnected
+			return
+		}
+	}
 }
 
 func getStatusData() (ResponseData, error) {

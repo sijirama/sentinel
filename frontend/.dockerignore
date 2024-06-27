@@ -1,45 +1,4 @@
-# Node.js specific
 node_modules
-npm-debug.log
-yarn-error.log
+README.md
+LICENSE
 
-# Astro build output
-dist
-
-# Git
-.git
-.gitignore
-
-# IDE specific
-.vscode
-.idea
-
-# Logs
-*.log
-
-# Temporary files
-tmp/
-temp/
-
-# Docker
-Dockerfile
-*.Dockerfile
-docker-compose*.yml
-
-# Test coverage
-coverage
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-
-.git
-.gitignore
-Dockerfile
-.dockerignore
-node_modules/
-dist/
-.astro/
-.env

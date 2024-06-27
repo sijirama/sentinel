@@ -1,17 +1,18 @@
+/** @type {import('tailwindcss').Config} */
 import colors from 'tailwindcss/colors';
 
-const config = {
+export default {
     content: [
-        './src/**/*.{js,ts,jsx,tsx}',
-        './node_modules/@tremor/**/*.{js,ts,jsx,tsx}',
+        "./index.html",
+        "./src/**/*.{js,ts,jsx,tsx}",
+
+        // Path to Tremor module
+        "./node_modules/@tremor/**/*.{js,ts,jsx,tsx}",
     ],
     theme: {
         transparent: 'transparent',
         current: 'currentColor',
         extend: {
-            fontFamily: {
-                poppins: ['Poppins', 'sans-serif'],
-            },
             colors: {
                 // light mode
                 tremor: {
@@ -130,10 +131,5 @@ const config = {
                 /^(fill-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200|300|400|500|600|700|800|900|950))$/,
         },
     ],
-    plugins: [
-        require('@headlessui/tailwindcss'),
-        require('@tailwindcss/forms'),
-    ],
-};
-
-export default config;
+    plugins: [require('@headlessui/tailwindcss'), require('@tailwindcss/forms')],
+}

@@ -1,8 +1,10 @@
-// StatusComponent.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Card, Tracker, type Color } from '@tremor/react';
 import moment from 'moment';
 import { AreaChart } from '@tremor/react';
+import { useQuery } from '@tanstack/react-query';
+import Loader from './Loader';
+
 
 interface StatusData {
     status: number;
@@ -34,6 +36,22 @@ interface Tracker {
     tooltip: string;
 }
 
+const fetchStatusData = async () => {
+    return new Promise<ResponseData>((resolve, reject) => {
+        const eventSource = new EventSource('http://localhost:8080/status');
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data) as ResponseData;
+            eventSource.close();
+            resolve(reverStatuses(data));
+        };
+        eventSource.onerror = (error) => {
+            console.log(error)
+            eventSource.close();
+            reject(new Error('EventSource failed'));
+        };
+    });
+};
+
 const mapStatusToTrackerData = (statuses: StatusData[]): Tracker[] => {
     return statuses.map((status) => {
         let color: Color = 'emerald';
@@ -44,7 +62,6 @@ const mapStatusToTrackerData = (statuses: StatusData[]): Tracker[] => {
             color = 'rose';
             tooltip = 'Downtime: ' + time;
         } else if (status.ping > 1000) {
-            // Assuming ping > 1000ms is considered degraded
             color = 'yellow';
             tooltip = 'Degraded: ' + time;
         }
@@ -63,7 +80,7 @@ const mapStatusToChartData = (statuses: StatusData[]) => {
 };
 
 const reverStatuses = (data: ResponseData): ResponseData => {
-    Object.entries(data.siteStatuses).map(([key, siteStatus]) => {
+    Object.entries(data.siteStatuses).map(([_key, siteStatus]) => {
         return siteStatus.statuses = siteStatus.statuses.reverse()
     })
     return data
@@ -72,39 +89,31 @@ const reverStatuses = (data: ResponseData): ResponseData => {
 const dataFormatter = (number: number) => `${number}ms`;
 
 const StatusComponent: React.FC = () => {
-    const [statusData, setStatusData] = useState<ResponseData | null>(null);
-    const [areAllOperational, setAllOperational] = useState(false);
+    const { data: statusData, error, refetch } = useQuery<ResponseData>({
+        queryKey: ['statusData'],
+        queryFn: fetchStatusData,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        refetchIntervalInBackground: true,
+        retry: true
+    });
 
     useEffect(() => {
-        const eventSource = new EventSource('api/status');
+        const interval = setInterval(refetch, 30000); // Refetch every 30 seconds
+        return () => clearInterval(interval);
+    }, [refetch]);
 
-        eventSource.onmessage = (event) => {
-            const data = JSON.parse(event.data) as ResponseData;
-
-
-            setStatusData(
-                reverStatuses(data)
-            );
-
-            const allOperational = Object.values(data.siteStatuses).every(
-                (site) => site.statuses[site.statuses.length - 1].status === 1
-            );
-            setAllOperational(allOperational);
-        };
-
-        eventSource.onerror = (error) => {
-            eventSource.close();
-            console.error("EventSource failed:", event);
-        };
-
-        return () => {
-            eventSource.close();
-        };
-    }, []);
+    if (error) {
+        return <div>Error loading status data...</div>;
+    }
 
     if (!statusData) {
-        return <div>Loading status data...</div>;
+        return <Loader />
     }
+
+    const areAllOperational = Object.values(statusData.siteStatuses).every(
+        (site) => site.statuses[site.statuses.length - 1].status === 1
+    );
 
     return (
         <div className="bg-[#080B0F] text-white min-h-screen p-4 font-poppins">
@@ -171,3 +180,36 @@ const StatusComponent: React.FC = () => {
 };
 
 export default StatusComponent;
+
+// const [statusData, setStatusData] = useState<ResponseData | null>(null);
+// const [areAllOperational, setAllOperational] = useState(false);
+//
+//
+// useEffect(() => {
+//     const eventSource = new EventSource('api/status');
+//
+//     eventSource.onmessage = (event) => {
+//         const data = JSON.parse(event.data) as ResponseData;
+//
+//
+//         setStatusData(
+//             reverStatuses(data)
+//         );
+//
+//         const allOperational = Object.values(data.siteStatuses).every(
+//             (site) => site.statuses[site.statuses.length - 1].status === 1
+//         );
+//         setAllOperational(allOperational);
+//     };
+//
+//     eventSource.onerror = (error) => {
+//         eventSource.close();
+//         console.error("EventSource failed:", event);
+//     };
+//
+//     return () => {
+//         eventSource.close();
+//     };
+// }, []);
+
+

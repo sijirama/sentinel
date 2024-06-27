@@ -1,12 +1,10 @@
-FROM node:lts-alpine
- 
+FROM oven/bun
+
+
 WORKDIR /app
 COPY . .
- 
-RUN npm ci
- 
-EXPOSE 4321
- 
-# Use the dev command specified in your package.json
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
+RUN bun install
+
+EXPOSE 5173
+CMD ["bun", "dev" , "--", "--host", "0.0.0.0"]
