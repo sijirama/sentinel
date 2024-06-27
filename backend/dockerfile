@@ -1,0 +1,15 @@
+FROM golang:1.22-alpine AS builder
+ENV CGO_ENABLED=1
+RUN apk add --no-cache gcc musl-dev
+WORKDIR /app
+COPY . .
+RUN go mod download
+RUN CGO_ENABLED=1 go build -o backend
+
+FROM alpine:3.16
+RUN apk add --no-cache ca-certificates
+WORKDIR /app
+COPY --from=builder /app/backend .
+COPY config.json .
+CMD ["./backend"]
+EXPOSE 8080

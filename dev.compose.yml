@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dev.Dockerfile
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "8080:8080"
+    environment:
+      - GO_ENV=development
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dev.dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "4321:4321"
+    environment:
+      - NODE_ENV=development
+    restart: on-failure
+    depends_on:
+       - backend
+
+volumes:
+  backend_data:
+  frontend_data:

@@ -1,0 +1,42 @@
+# Golang specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Git
+.git
+.gitignore
+
+# IDE specific
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Build artifacts
+build/
+
+# Docker
+Dockerfile
+*.Dockerfile
+docker-compose*.yml
+
+# Dependency directories (uncomment if you're not using Go modules)
+# vendor/
+
+# Config files (if you don't want them in the image)
+# config.json
+
+# SQLite database (if you're handling it with volumes)
+*.db
+
+# Any other project-specific files or directories you want to exclude
