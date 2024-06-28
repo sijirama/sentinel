@@ -38,7 +38,7 @@ interface Tracker {
 
 const fetchStatusData = async () => {
     return new Promise<ResponseData>((resolve, reject) => {
-        const eventSource = new EventSource('http://localhost:8080/status');
+        const eventSource = new EventSource('/api/status');
         eventSource.onmessage = (event) => {
             const data = JSON.parse(event.data) as ResponseData;
             eventSource.close();
